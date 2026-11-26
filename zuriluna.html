@@ -558,6 +558,10 @@
       margin-bottom: 4px;
     }
 
+    .result-panel.is-err .result-kicker {
+      color: var(--err-text);
+    }
+
     .result-headline {
       font-size: 1.25rem;
       font-weight: 800;
@@ -846,6 +850,8 @@
     // Reemplaza por tu URL activa (sin "/" al final)
     const SERVIDOR = "https://shine-relocate-skipping.ngrok-free.dev";
     const HEADERS_BASE = { "ngrok-skip-browser-warning": "true" };
+    // Umbral mínimo de confianza para considerar que la imagen sí es un perro o un gato
+    const CONFIANZA_MINIMA = 0.78;
 
     async function comprobarSalud() {
       const pill = document.getElementById("status-pill");
@@ -930,13 +936,29 @@
 
     function capturarFoto() {
       const video = document.getElementById("video");
-      if (!streamActivo || !video.videoWidth) return;
+      const wrap = document.getElementById("vision-resultado-wrap");
+      const box = document.getElementById("resultado-perros");
+
+      if (!streamActivo || !video.videoWidth || !video.videoHeight) {
+        wrap.classList.remove("is-hidden");
+        box.className = "result-panel is-err";
+        box.textContent = "Primero activa la cámara y espera a que aparezca la imagen antes de capturar.";
+        return;
+      }
+
       const canvas = document.createElement("canvas");
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       canvas.getContext("2d").drawImage(video, 0, 0);
+
       canvas.toBlob(blob => {
-        if (blob) enviarImagen(blob);
+        if (!blob || blob.size < 2000) {
+          wrap.classList.remove("is-hidden");
+          box.className = "result-panel is-err";
+          box.textContent = "No se pudo capturar una fotografía válida desde la cámara.";
+          return;
+        }
+        enviarImagen(blob);
       }, "image/jpeg", 0.92);
     }
 
@@ -977,11 +999,27 @@
         if (!res.ok) throw new Error("Respuesta inválida");
         const data = await res.json();
 
+        const confianza = Number(data.confianza ?? 0);
         const esPerro = data.etiqueta === "perro";
+        const pPerro = ((data.prob_perro ?? (esPerro ? confianza : 1 - confianza)) * 100);
+        const pGato = ((data.prob_gato ?? (!esPerro ? confianza : 1 - confianza)) * 100);
+
+        if (confianza < CONFIANZA_MINIMA) {
+          box.className = "result-panel is-err";
+          box.innerHTML = `
+            <div class="result-kicker">No clasificado</div>
+            <div class="result-headline" style="color:var(--err-text);margin-bottom:8px;">No se detectó un perro ni un gato</div>
+            <div style="font-size:0.8125rem;margin-bottom:14px;">
+              La imagen capturada o subida no corresponde claramente a ninguna de las dos clases (confianza: ${(confianza * 100).toFixed(1)}%, mínimo requerido: ${(CONFIANZA_MINIMA * 100).toFixed(0)}%).
+            </div>
+            ${barraHtml("Perro", pPerro)}
+            ${barraHtml("Gato", pGato)}
+          `;
+          return;
+        }
+
         const etiquetaTexto = esPerro ? "Perro" : "Gato";
-        const confianzaPct = (data.confianza * 100).toFixed(1);
-        const pPerro = ((data.prob_perro ?? (esPerro ? data.confianza : 1 - data.confianza)) * 100);
-        const pGato = ((data.prob_gato ?? (!esPerro ? data.confianza : 1 - data.confianza)) * 100);
+        const confianzaPct = (confianza * 100).toFixed(1);
 
         box.className = "result-panel is-ok";
         box.innerHTML = `
