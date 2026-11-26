@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ML Studio · Adrián Luna & Zurisadai Cuevas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-canvas: #f4f6f9;
+      --bg-surface: #ffffff;
+      --bg-subtle: #f8fafc;
+      --bg-hover: #f1f5f9;
+      --ink-primary: #0b1120;
+      --ink-secondary: #475569;
+      --ink-muted: #64748b;
+      --border-hairline: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --accent-tint: rgba(37, 99, 235, 0.08);
+      --accent-ring: rgba(37, 99, 235, 0.22);
+      --ok-text: #065f46;
+      --ok-bg: #ecfdf5;
+      --ok-border: #a7f3d0;
+      --ok-dot: #10b981;
+      --err-text: #991b1b;
+      --err-bg: #fef2f2;
+      --err-border: #fecaca;
+      --err-dot: #ef4444;
+      --radius-xl: 20px;
+      --radius-lg: 14px;
+      --radius-md: 10px;
+      --radius-sm: 8px;
+      --shadow-card: 0 1px 2px rgba(11, 17, 32, 0.04), 0 12px 32px -12px rgba(11, 17, 32, 0.08);
+      --shadow-btn: 0 1px 2px rgba(11, 17, 32, 0.08), 0 6px 16px -4px rgba(37, 99, 235, 0.35);
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-canvas);
+      background-image: radial-gradient(circle at 50% 0%, rgba(37, 99, 235, 0.06) 0%, transparent 55%);
+      color: var(--ink-primary);
+      line-height: 1.55;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* TOPBAR INSTITUCIONAL */
+    .topbar {
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-hairline);
+    }
+
+    .topbar-inner {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 14px 24px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-mark {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-md);
+      background: var(--ink-primary);
+      color: #ffffff;
+      display: grid;
+      place-items: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      font-weight: 500;
+      letter-spacing: -0.04em;
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      color: var(--ink-primary);
+    }
+
+    .brand-sub {
+      font-size: 0.78rem;
+      color: var(--ink-muted);
+    }
+
+    .authors-bar {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-hairline);
+      font-size: 0.8125rem;
+      color: var(--ink-secondary);
+    }
+
+    .authors-bar strong {
+      color: var(--ink-primary);
+      font-weight: 600;
+    }
+
+    .authors-bar .pipe {
+      color: var(--border-strong);
+      user-select: none;
+    }
+
+    /* CONTENEDOR PRINCIPAL */
+    .shell {
+      max-width: 980px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 32px 24px 56px;
+      flex: 1;
+    }
+
+    .page-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .page-head h1 {
+      font-size: clamp(1.5rem, 2.8vw, 2rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+      color: var(--ink-primary);
+    }
+
+    .page-head p {
+      margin-top: 6px;
+      font-size: 0.925rem;
+      color: var(--ink-secondary);
+      max-width: 580px;
+    }
+
+    /* INDICADOR DE ESTADO */
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-hairline);
+      color: var(--ink-secondary);
+      transition: background-color 0.2s var(--ease-out), border-color 0.2s var(--ease-out), color 0.2s var(--ease-out);
+      white-space: nowrap;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #94a3b8;
+    }
+
+    .status-pill.is-online {
+      background: var(--ok-bg);
+      border-color: var(--ok-border);
+      color: var(--ok-text);
+    }
+
+    .status-pill.is-online .status-dot {
+      background: var(--ok-dot);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
+    }
+
+    .status-pill.is-offline {
+      background: var(--err-bg);
+      border-color: var(--err-border);
+      color: var(--err-text);
+    }
+
+    .status-pill.is-offline .status-dot {
+      background: var(--err-dot);
+    }
+
+    /* NAVEGACIÓN DE MODELOS (SEGMENTED CONTROL) */
+    .nav-tabs {
+      display: inline-flex;
+      padding: 4px;
+      border-radius: var(--radius-lg);
+      background: #e9eef5;
+      margin-bottom: 20px;
+      gap: 4px;
+    }
+
+    .nav-tab {
+      appearance: none;
+      border: 0;
+      background: transparent;
+      color: var(--ink-secondary);
+      font-family: inherit;
+      font-size: 0.875rem;
+      font-weight: 600;
+      padding: 9px 16px;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.18s var(--ease-out);
+    }
+
+    .nav-tab:hover:not(.is-active) {
+      color: var(--ink-primary);
+    }
+
+    .nav-tab.is-active {
+      background: var(--bg-surface);
+      color: var(--ink-primary);
+      box-shadow: 0 1px 3px rgba(11, 17, 32, 0.08), 0 1px 2px rgba(11, 17, 32, 0.04);
+    }
+
+    /* TARJETA PRINCIPAL */
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-card);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 24px 28px 20px;
+      border-bottom: 1px solid var(--border-hairline);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .card-header h2 {
+      font-size: 1.125rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--ink-primary);
+    }
+
+    .card-header p {
+      font-size: 0.85rem;
+      color: var(--ink-muted);
+      margin-top: 2px;
+    }
+
+    .card-body {
+      padding: 28px;
+    }
+
+    /* SWITCH DE MODO DE ENTRADA */
+    .mode-switch {
+      display: inline-flex;
+      border: 1px solid var(--border-hairline);
+      background: var(--bg-subtle);
+      border-radius: var(--radius-md);
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .mode-btn {
+      appearance: none;
+      border: 0;
+      background: transparent;
+      color: var(--ink-secondary);
+      font-family: inherit;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.16s var(--ease-out);
+    }
+
+    .mode-btn.is-active {
+      background: var(--bg-surface);
+      color: var(--accent);
+      box-shadow: 0 1px 2px rgba(11, 17, 32, 0.06);
+    }
+
+    /* DROPZONE */
+    .dropzone {
+      border: 1.5px dashed var(--border-strong);
+      border-radius: var(--radius-lg);
+      background: var(--bg-subtle);
+      padding: 36px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.18s var(--ease-out), background-color 0.18s var(--ease-out);
+    }
+
+    .dropzone:hover,
+    .dropzone.is-dragover {
+      border-color: var(--accent);
+      background: var(--accent-tint);
+    }
+
+    .dropzone-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--ink-primary);
+    }
+
+    .dropzone-hint {
+      font-size: 0.8125rem;
+      color: var(--ink-muted);
+      margin-top: 4px;
+    }
+
+    .dropzone-trigger {
+      margin-top: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: var(--radius-md);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--ink-primary);
+      transition: border-color 0.16s var(--ease-out), background-color 0.16s var(--ease-out);
+    }
+
+    .dropzone:hover .dropzone-trigger {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    /* CÁMARA */
+    .camera-stage {
+      background: #090d16;
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      text-align: center;
+    }
+
+    video {
+      width: 100%;
+      max-height: 360px;
+      border-radius: var(--radius-md);
+      background: #020617;
+      display: block;
+      margin: 0 auto;
+      object-fit: cover;
+    }
+
+    .camera-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .camera-note {
+      margin-top: 10px;
+      font-size: 0.78rem;
+      color: #94a3b8;
+    }
+
+    /* VISTA PREVIA + RESULTADO LADO A LADO EN ESCRITORIO */
+    .vision-output {
+      margin-top: 24px;
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    @media (max-width: 700px) {
+      .vision-output {
+        grid-template-columns: 1fr;
+      }
+      .card-header, .card-body {
+        padding: 20px;
+      }
+    }
+
+    .preview-frame {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-lg);
+      padding: 8px;
+    }
+
+    .preview-frame img {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      object-fit: cover;
+      border-radius: var(--radius-md);
+      display: block;
+    }
+
+    /* FORMULARIO DE 13 CAMPOS */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px 18px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      color: var(--ink-secondary);
+    }
+
+    select {
+      width: 100%;
+      padding: 9px 12px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-strong);
+      background: var(--bg-surface);
+      color: var(--ink-primary);
+      font-family: inherit;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: border-color 0.16s var(--ease-out), box-shadow 0.16s var(--ease-out);
+    }
+
+    select:hover {
+      border-color: #94a3b8;
+    }
+
+    select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-ring);
+    }
+
+    /* BOTONES */
+    .btn {
+      appearance: none;
+      border: 0;
+      border-radius: var(--radius-md);
+      font-family: inherit;
+      font-size: 0.875rem;
+      font-weight: 600;
+      padding: 10px 18px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: transform 0.15s var(--ease-out), background-color 0.16s var(--ease-out), box-shadow 0.16s var(--ease-out);
+    }
+
+    .btn:active {
+      transform: scale(0.99);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #ffffff;
+      box-shadow: var(--shadow-btn);
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn-dark {
+      background: #1e293b;
+      color: #ffffff;
+    }
+
+    .btn-dark:hover {
+      background: #0f172a;
+    }
+
+    .btn-submit {
+      width: 100%;
+      margin-top: 24px;
+      padding: 13px 20px;
+      font-size: 0.9375rem;
+    }
+
+    /* PANEL DE RESULTADO */
+    .result-panel {
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-hairline);
+      background: var(--bg-subtle);
+      padding: 20px;
+    }
+
+    .result-panel.spaced {
+      margin-top: 22px;
+    }
+
+    .result-panel.is-ok {
+      background: var(--ok-bg);
+      border-color: var(--ok-border);
+    }
+
+    .result-panel.is-err {
+      background: var(--err-bg);
+      border-color: var(--err-border);
+      color: var(--err-text);
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .result-kicker {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--ok-text);
+      opacity: 0.85;
+      margin-bottom: 4px;
+    }
+
+    .result-headline {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--ink-primary);
+      margin-bottom: 14px;
+    }
+
+    .metric-row + .metric-row {
+      margin-top: 12px;
+    }
+
+    .metric-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--ink-secondary);
+      margin-bottom: 5px;
+    }
+
+    .metric-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--ink-primary);
+    }
+
+    .metric-track {
+      height: 8px;
+      width: 100%;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.08);
+      overflow: hidden;
+    }
+
+    .metric-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: var(--accent);
+      transition: width 0.45s var(--ease-out);
+    }
+
+    /* FOOTER */
+    .footer {
+      border-top: 1px solid var(--border-hairline);
+      background: var(--bg-surface);
+      padding: 18px 24px;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--ink-muted);
+    }
+
+    .footer strong {
+      color: var(--ink-secondary);
+      font-weight: 600;
+    }
+
+    .is-hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-mark">ML</div>
+        <div>
+          <div class="brand-title">Modelos de Aprendizaje Automático</div>
+          <div class="brand-sub">Universidad Tecnológica de Panamá · Parcial #2</div>
+        </div>
+      </div>
+
+      <div class="authors-bar">
+        <span><strong>Adrián Luna</strong></span>
+        <span class="pipe">|</span>
+        <span><strong>Zurisadai Cuevas</strong></span>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <div class="page-head">
+      <div>
+        <h1>Inferencia en Tiempo Real</h1>
+        <p>Clasificación visual de mascotas mediante red neuronal convolucional y predicción de adaptabilidad estudiantil.</p>
+      </div>
+
+      <div id="status-pill" class="status-pill" role="status" aria-live="polite">
+        <span class="status-dot"></span>
+        <span id="status-text">Verificando enlace...</span>
+      </div>
+    </div>
+
+    <nav class="nav-tabs" aria-label="Modelos disponibles">
+      <button id="tab-perros" class="nav-tab is-active" onclick="cambiarModelo('perros')">
+        Perros y Gatos
+      </button>
+      <button id="tab-estudiante" class="nav-tab" onclick="cambiarModelo('estudiante')">
+        Adaptabilidad del Estudiante
+      </button>
+    </nav>
+
+    <!-- MODELO 1: PERROS Y GATOS -->
+    <section id="panel-perros" class="card">
+      <div class="card-header">
+        <div>
+          <h2>Clasificador Perro / Gato</h2>
+          <p>Selecciona una imagen desde tu equipo o captura una fotografía con la cámara.</p>
+        </div>
+
+        <div class="mode-switch" role="group" aria-label="Origen de imagen">
+          <button id="btn-modo-subir" class="mode-btn is-active" onclick="cambiarModoImagen('subir')">Archivo</button>
+          <button id="btn-modo-camara" class="mode-btn" onclick="cambiarModoImagen('camara')">Cámara</button>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div id="zona-archivo" class="dropzone" onclick="document.getElementById('foto').click()">
+          <div class="dropzone-title">Arrastra una imagen aquí o haz clic para explorarla</div>
+          <div class="dropzone-hint">Preprocesamiento automático a 100×100 px · JPG, PNG, WEBP</div>
+          <div class="dropzone-trigger">Seleccionar imagen</div>
+          <input type="file" id="foto" accept="image/*" onchange="analizarArchivoSeleccionado()" onclick="event.stopPropagation()">
+        </div>
+
+        <div id="zona-camara" class="camera-stage is-hidden">
+          <video id="video" autoplay playsinline muted></video>
+          <div class="camera-toolbar">
+            <button type="button" class="btn btn-dark" onclick="encenderCamara()">Activar cámara</button>
+            <button type="button" class="btn btn-primary" onclick="capturarFoto()">Capturar y clasificar</button>
+          </div>
+          <div class="camera-note">Requiere permiso de cámara y contexto seguro (HTTPS o localhost).</div>
+        </div>
+
+        <div id="vision-resultado-wrap" class="vision-output is-hidden">
+          <div class="preview-frame">
+            <img id="vista-previa" alt="Vista previa de la imagen enviada">
+          </div>
+          <div id="resultado-perros" class="result-panel"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MODELO 2: ADAPTABILIDAD DEL ESTUDIANTE -->
+    <section id="panel-estudiante" class="card is-hidden">
+      <div class="card-header">
+        <div>
+          <h2>Adaptabilidad del Estudiante</h2>
+          <p>Configura las 13 variables del perfil para estimar el nivel de adaptabilidad.</p>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="field">
+            <label for="Gender">Género</label>
+            <select id="Gender">
+              <option value="Boy">Niño / hombre</option>
+              <option value="Girl">Niña / mujer</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="Age">Edad</label>
+            <select id="Age">
+              <option value="1-5">1 a 5 años</option>
+              <option value="6-10">6 a 10 años</option>
+              <option value="11-15">11 a 15 años</option>
+              <option value="16-20">16 a 20 años</option>
+              <option value="21-25" selected>21 a 25 años</option>
+              <option value="26-30">26 a 30 años</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="Education Level">Nivel educativo</label>
+            <select id="Education Level">
+              <option value="School">Escuela</option>
+              <option value="College">Colegio</option>
+              <option value="University" selected>Universidad</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="Institution Type">Tipo de institución</label>
+            <select id="Institution Type">
+              <option value="Government">Pública</option>
+              <option value="Non Government">Privada</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="IT Student">Estudiante de TI</label>
+            <select id="IT Student">
+              <option value="Yes">Sí</option>
+              <option value="No">No</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="Location">Ubicación urbana</label>
+            <select id="Location">
+              <option value="Yes">Sí</option>
+              <option value="No">No</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="Load-shedding">Cortes eléctricos</label>
+            <select id="Load-shedding">
+              <option value="Low">Bajos</option>
+              <option value="High">Altos</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="Financial Condition">Condición financiera</label>
+            <select id="Financial Condition">
+              <option value="Poor">Baja</option>
+              <option value="Mid" selected>Media</option>
+              <option value="Rich">Alta</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="Internet Type">Tipo de internet</label>
+            <select id="Internet Type">
+              <option value="Wifi">Wi-Fi</option>
+              <option value="Mobile Data">Datos móviles</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="Network Type">Tipo de red</label>
+            <select id="Network Type">
+              <option value="2G">2G</option>
+              <option value="3G">3G</option>
+              <option value="4G" selected>4G</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="Class Duration">Duración de clase</label>
+            <select id="Class Duration">
+              <option value="0">0 horas</option>
+              <option value="1-3" selected>1 a 3 horas</option>
+              <option value="3-6">3 a 6 horas</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="Self Lms">LMS institucional</label>
+            <select id="Self Lms">
+              <option value="Yes">Sí</option>
+              <option value="No">No</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="Device">Dispositivo</label>
+            <select id="Device">
+              <option value="Computer">Computadora</option>
+              <option value="Tab">Tableta</option>
+              <option value="Mobile">Celular</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="button" class="btn btn-primary btn-submit" onclick="evaluarAdaptabilidad()">
+          Calcular adaptabilidad
+        </button>
+
+        <div id="resultado-estudiante" class="result-panel spaced is-hidden"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <strong>Adrián Luna</strong> &amp; <strong>Zurisadai Cuevas</strong> · Parcial 2 de Machine Learning
+  </footer>
+
+  <script>
+    // Reemplaza por tu URL activa (sin "/" al final)
+    const SERVIDOR = "https://shine-relocate-skipping.ngrok-free.dev";
+    const HEADERS_BASE = { "ngrok-skip-browser-warning": "true" };
+
+    async function comprobarSalud() {
+      const pill = document.getElementById("status-pill");
+      const label = document.getElementById("status-text");
+      try {
+        const res = await fetch(`${SERVIDOR}/`, { headers: HEADERS_BASE });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        pill.className = "status-pill is-online";
+        label.textContent = "Backend en línea";
+      } catch {
+        pill.className = "status-pill is-offline";
+        label.textContent = "Backend sin conexión";
+      }
+    }
+    comprobarSalud();
+
+    function cambiarModelo(modelo) {
+      document.getElementById("panel-perros").classList.toggle("is-hidden", modelo !== "perros");
+      document.getElementById("panel-estudiante").classList.toggle("is-hidden", modelo !== "estudiante");
+      document.getElementById("tab-perros").classList.toggle("is-active", modelo === "perros");
+      document.getElementById("tab-estudiante").classList.toggle("is-active", modelo === "estudiante");
+      if (modelo !== "perros") detenerCamara();
+    }
+
+    function cambiarModoImagen(modo) {
+      document.getElementById("zona-archivo").classList.toggle("is-hidden", modo !== "subir");
+      document.getElementById("zona-camara").classList.toggle("is-hidden", modo !== "camara");
+      document.getElementById("btn-modo-subir").classList.toggle("is-active", modo === "subir");
+      document.getElementById("btn-modo-camara").classList.toggle("is-active", modo === "camara");
+      if (modo === "subir") detenerCamara();
+    }
+
+    // Drag & drop en la zona de archivo
+    const dropzone = document.getElementById("zona-archivo");
+    ["dragenter", "dragover"].forEach(evt => {
+      dropzone.addEventListener(evt, e => {
+        e.preventDefault();
+        dropzone.classList.add("is-dragover");
+      });
+    });
+    ["dragleave", "drop"].forEach(evt => {
+      dropzone.addEventListener(evt, e => {
+        e.preventDefault();
+        dropzone.classList.remove("is-dragover");
+      });
+    });
+    dropzone.addEventListener("drop", e => {
+      const archivo = e.dataTransfer?.files?.[0];
+      if (archivo && archivo.type.startsWith("image/")) {
+        enviarImagen(archivo);
+      }
+    });
+
+    function analizarArchivoSeleccionado() {
+      const archivo = document.getElementById("foto").files[0];
+      if (archivo) enviarImagen(archivo);
+    }
+
+    let streamActivo = null;
+
+    async function encenderCamara() {
+      const box = document.getElementById("resultado-perros");
+      const wrap = document.getElementById("vision-resultado-wrap");
+      try {
+        streamActivo = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        document.getElementById("video").srcObject = streamActivo;
+      } catch {
+        wrap.classList.remove("is-hidden");
+        box.className = "result-panel is-err";
+        box.textContent = "No fue posible acceder a la cámara. Revisa los permisos del navegador.";
+      }
+    }
+
+    function detenerCamara() {
+      if (streamActivo) {
+        streamActivo.getTracks().forEach(t => t.stop());
+        streamActivo = null;
+      }
+      const vid = document.getElementById("video");
+      if (vid) vid.srcObject = null;
+    }
+
+    function capturarFoto() {
+      const video = document.getElementById("video");
+      if (!streamActivo || !video.videoWidth) return;
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext("2d").drawImage(video, 0, 0);
+      canvas.toBlob(blob => {
+        if (blob) enviarImagen(blob);
+      }, "image/jpeg", 0.92);
+    }
+
+    function barraHtml(etiqueta, porcentaje) {
+      const pct = Number(porcentaje).toFixed(1);
+      return `
+        <div class="metric-row">
+          <div class="metric-meta">
+            <span>${etiqueta}</span>
+            <span class="metric-val">${pct}%</span>
+          </div>
+          <div class="metric-track">
+            <div class="metric-fill" style="width: ${pct}%"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    async function enviarImagen(imagen) {
+      const wrap = document.getElementById("vision-resultado-wrap");
+      const preview = document.getElementById("vista-previa");
+      const box = document.getElementById("resultado-perros");
+
+      preview.src = URL.createObjectURL(imagen);
+      wrap.classList.remove("is-hidden");
+      box.className = "result-panel";
+      box.innerHTML = `<div class="result-kicker">Procesando</div><div style="font-size:0.875rem;color:var(--ink-secondary)">Enviando imagen al modelo...</div>`;
+
+      const formData = new FormData();
+      formData.append("imagen", imagen, "captura.jpg");
+
+      try {
+        const res = await fetch(`${SERVIDOR}/api/perros-gatos`, {
+          method: "POST",
+          body: formData,
+          headers: HEADERS_BASE
+        });
+        if (!res.ok) throw new Error("Respuesta inválida");
+        const data = await res.json();
+
+        const esPerro = data.etiqueta === "perro";
+        const etiquetaTexto = esPerro ? "Perro" : "Gato";
+        const confianzaPct = (data.confianza * 100).toFixed(1);
+        const pPerro = ((data.prob_perro ?? (esPerro ? data.confianza : 1 - data.confianza)) * 100);
+        const pGato = ((data.prob_gato ?? (!esPerro ? data.confianza : 1 - data.confianza)) * 100);
+
+        box.className = "result-panel is-ok";
+        box.innerHTML = `
+          <div class="result-kicker">Predicción completada</div>
+          <div class="result-headline">${etiquetaTexto} · ${confianzaPct}% de confianza</div>
+          ${barraHtml("Perro", pPerro)}
+          ${barraHtml("Gato", pGato)}
+        `;
+      } catch {
+        box.className = "result-panel is-err";
+        box.textContent = "Error al comunicarse con el servidor. Verifica que esté activo y que SERVIDOR sea correcto.";
+      }
+    }
+
+    const COLUMNAS = [
+      "Gender", "Age", "Education Level", "Institution Type",
+      "IT Student", "Location", "Load-shedding", "Financial Condition",
+      "Internet Type", "Network Type", "Class Duration", "Self Lms", "Device"
+    ];
+
+    const TRADUCCION_NIVEL = {
+      High: "Alta",
+      Moderate: "Moderada",
+      Low: "Baja"
+    };
+
+    async function evaluarAdaptabilidad() {
+      const box = document.getElementById("resultado-estudiante");
+      box.className = "result-panel spaced";
+      box.innerHTML = `<div class="result-kicker">Procesando</div><div style="font-size:0.875rem;color:var(--ink-secondary)">Calculando probabilidades...</div>`;
+
+      const payload = {};
+      for (const col of COLUMNAS) {
+        payload[col] = document.getElementById(col).value;
+      }
+
+      try {
+        const res = await fetch(`${SERVIDOR}/api/adaptabilidad`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...HEADERS_BASE },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error("Respuesta inválida");
+        const data = await res.json();
+
+        const nivelLegible = TRADUCCION_NIVEL[data.nivel] || data.nivel;
+        const distribucion = (data.probabilidades || [])
+          .map(item => barraHtml(`Adaptabilidad ${TRADUCCION_NIVEL[item.nivel] || item.nivel}`, item.prob * 100))
+          .join("");
+
+        box.className = "result-panel spaced is-ok";
+        box.innerHTML = `
+          <div class="result-kicker">Resultado del modelo</div>
+          <div class="result-headline">Nivel estimado: ${nivelLegible}</div>
+          ${distribucion}
+        `;
+      } catch {
+        box.className = "result-panel spaced is-err";
+        box.textContent = "Error al comunicarse con el servidor. Verifica que esté activo y que SERVIDOR sea correcto.";
+      }
+    }
+  </script>
+</body>
+</html>
