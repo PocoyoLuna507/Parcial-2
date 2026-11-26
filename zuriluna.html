@@ -7,6 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
 
   <style>
     :root {
@@ -850,8 +852,36 @@
     // Reemplaza por tu URL activa (sin "/" al final)
     const SERVIDOR = "https://shine-relocate-skipping.ngrok-free.dev";
     const HEADERS_BASE = { "ngrok-skip-browser-warning": "true" };
-    // Umbral mínimo de confianza para considerar que la imagen sí es un perro o un gato
-    const CONFIANZA_MINIMA = 0.78;
+
+    // Detector previo para filtrar fotos que no contienen perros ni gatos
+    let detectorPreFiltro = null;
+    if (window.mobilenet) {
+      mobilenet.load().then(modelo => {
+        detectorPreFiltro = modelo;
+      }).catch(() => {
+        detectorPreFiltro = null;
+      });
+    }
+
+    const CLASES_PERRO_GATO = [
+      "dog", "terrier", "retriever", "shepherd", "hound", "spaniel", "poodle",
+      "bulldog", "chihuahua", "beagle", "boxer", "pug", "husky", "malamute",
+      "dalmatian", "doberman", "rottweiler", "schnauzer", "corgi", "collie",
+      "mastiff", "dane", "setter", "pointer", "greyhound", "whippet", "basenji",
+      "chow", "pomeranian", "samoyed", "shih-tzu", "pekinese", "maltese",
+      "papillon", "borzoi", "dachshund", "pinscher", "akita", "dingo",
+      "cat", "tabby", "tiger cat", "persian cat", "siamese cat", "egyptian cat",
+      "lynx", "cougar", "kitten"
+    ];
+
+    async function verificarEsMascota(imgElement) {
+      if (!detectorPreFiltro) return true;
+      const predicciones = await detectorPreFiltro.classify(imgElement, 5);
+      return predicciones.some(p => {
+        const nombre = p.className.toLowerCase();
+        return p.probability >= 0.08 && CLASES_PERRO_GATO.some(clave => nombre.includes(clave));
+      });
+    }
 
     async function comprobarSalud() {
       const pill = document.getElementById("status-pill");
@@ -985,7 +1015,27 @@
       preview.src = URL.createObjectURL(imagen);
       wrap.classList.remove("is-hidden");
       box.className = "result-panel";
-      box.innerHTML = `<div class="result-kicker">Procesando</div><div style="font-size:0.875rem;color:var(--ink-secondary)">Enviando imagen al modelo...</div>`;
+      box.innerHTML = `<div class="result-kicker">Procesando</div><div style="font-size:0.875rem;color:var(--ink-secondary)">Verificando contenido de la imagen...</div>`;
+
+      await new Promise(resolve => {
+        if (preview.complete) resolve();
+        else preview.onload = resolve;
+      });
+
+      const esValida = await verificarEsMascota(preview);
+      if (!esValida) {
+        box.className = "result-panel is-err";
+        box.innerHTML = `
+          <div class="result-kicker">No clasificado</div>
+          <div class="result-headline" style="color:var(--err-text);margin-bottom:6px;">No se detectó un perro ni un gato</div>
+          <div style="font-size:0.8125rem;">
+            La imagen capturada o subida no corresponde a un perro ni a un gato. Enfoca directamente a la mascota e inténtalo de nuevo.
+          </div>
+        `;
+        return;
+      }
+
+      box.innerHTML = `<div class="result-kicker">Procesando</div><div style="font-size:0.875rem;color:var(--ink-secondary)">Clasificando con tu modelo...</div>`;
 
       const formData = new FormData();
       formData.append("imagen", imagen, "captura.jpg");
@@ -1001,25 +1051,10 @@
 
         const confianza = Number(data.confianza ?? 0);
         const esPerro = data.etiqueta === "perro";
-        const pPerro = ((data.prob_perro ?? (esPerro ? confianza : 1 - confianza)) * 100);
-        const pGato = ((data.prob_gato ?? (!esPerro ? confianza : 1 - confianza)) * 100);
-
-        if (confianza < CONFIANZA_MINIMA) {
-          box.className = "result-panel is-err";
-          box.innerHTML = `
-            <div class="result-kicker">No clasificado</div>
-            <div class="result-headline" style="color:var(--err-text);margin-bottom:8px;">No se detectó un perro ni un gato</div>
-            <div style="font-size:0.8125rem;margin-bottom:14px;">
-              La imagen capturada o subida no corresponde claramente a ninguna de las dos clases (confianza: ${(confianza * 100).toFixed(1)}%, mínimo requerido: ${(CONFIANZA_MINIMA * 100).toFixed(0)}%).
-            </div>
-            ${barraHtml("Perro", pPerro)}
-            ${barraHtml("Gato", pGato)}
-          `;
-          return;
-        }
-
         const etiquetaTexto = esPerro ? "Perro" : "Gato";
         const confianzaPct = (confianza * 100).toFixed(1);
+        const pPerro = ((data.prob_perro ?? (esPerro ? confianza : 1 - confianza)) * 100);
+        const pGato = ((data.prob_gato ?? (!esPerro ? confianza : 1 - confianza)) * 100);
 
         box.className = "result-panel is-ok";
         box.innerHTML = `
