@@ -64,6 +64,7 @@
       flex-direction: column;
     }
 
+    /* TOPBAR INSTITUCIONAL */
     .topbar {
       background: var(--bg-surface);
       border-bottom: 1px solid var(--border-hairline);
@@ -135,6 +136,7 @@
       user-select: none;
     }
 
+    /* CONTENEDOR PRINCIPAL */
     .shell {
       max-width: 980px;
       width: 100%;
@@ -167,6 +169,7 @@
       max-width: 580px;
     }
 
+    /* INDICADOR DE ESTADO */
     .status-pill {
       display: inline-flex;
       align-items: center;
@@ -210,6 +213,7 @@
       background: var(--err-dot);
     }
 
+    /* NAVEGACIÓN DE MODELOS (SEGMENTED CONTROL) */
     .nav-tabs {
       display: inline-flex;
       padding: 4px;
@@ -246,6 +250,7 @@
       box-shadow: 0 1px 3px rgba(11, 17, 32, 0.08), 0 1px 2px rgba(11, 17, 32, 0.04);
     }
 
+    /* TARJETA PRINCIPAL */
     .card {
       background: var(--bg-surface);
       border: 1px solid var(--border-hairline);
@@ -281,6 +286,7 @@
       padding: 28px;
     }
 
+    /* SWITCH DE MODO DE ENTRADA */
     .mode-switch {
       display: inline-flex;
       border: 1px solid var(--border-hairline);
@@ -310,6 +316,7 @@
       box-shadow: 0 1px 2px rgba(11, 17, 32, 0.06);
     }
 
+    /* DROPZONE */
     .dropzone {
       border: 1.5px dashed var(--border-strong);
       border-radius: var(--radius-lg);
@@ -362,6 +369,7 @@
       display: none;
     }
 
+    /* CÁMARA */
     .camera-stage {
       background: #090d16;
       border-radius: var(--radius-lg);
@@ -393,6 +401,7 @@
       color: #94a3b8;
     }
 
+    /* VISTA PREVIA + RESULTADO LADO A LADO EN ESCRITORIO */
     .vision-output {
       margin-top: 24px;
       display: grid;
@@ -425,6 +434,7 @@
       display: block;
     }
 
+    /* FORMULARIO DE 13 CAMPOS */
     .form-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -468,6 +478,7 @@
       box-shadow: 0 0 0 3px var(--accent-ring);
     }
 
+    /* BOTONES */
     .btn {
       appearance: none;
       border: 0;
@@ -514,6 +525,7 @@
       font-size: 0.9375rem;
     }
 
+    /* PANEL DE RESULTADO */
     .result-panel {
       border-radius: var(--radius-lg);
       border: 1px solid var(--border-hairline);
@@ -595,6 +607,7 @@
       transition: width 0.45s var(--ease-out);
     }
 
+    /* FOOTER */
     .footer {
       border-top: 1px solid var(--border-hairline);
       background: var(--bg-surface);
@@ -837,8 +850,6 @@
 
   <script>
     const SERVIDOR = "https://shine-relocate-skipping.ngrok-free.dev";
-    const RUTA_ADAPTABILIDAD = "/api/adaptabilidad"; // Debe coincidir exactamente con tu @app.post(...) en Flask
-    const RUTA_PERROS_GATOS = "/api/perros-gatos";
     const HEADERS_BASE = { "ngrok-skip-browser-warning": "true" };
 
     let detectorPreFiltro = null;
@@ -907,6 +918,7 @@
       if (!detectorPreFiltro) return true;
       try {
         const predicciones = await detectorPreFiltro.classify(imgElement, 25);
+        console.log("MobileNet:", predicciones.map(p => p.className + " " + p.probability.toFixed(3)));
         const probMascota = predicciones
           .filter(p => esClasePerroOGato(p.className))
           .reduce((acc, p) => acc + p.probability, 0);
@@ -977,67 +989,6 @@
     let streamActivo = null;
     let urlVistaPreviaActual = null;
 
-    function establecerVistaPrevia(blobOArchivo) {
-      if (urlVistaPreviaActual) {
-        URL.revokeObjectURL(urlVistaPreviaActual);
-      }
-      urlVistaPreviaActual = URL.createObjectURL(blobOArchivo);
-      const img = document.getElementById("vista-previa");
-      return new Promise((resolve, reject) => {
-        img.onload = () => resolve(img);
-        img.onerror = () => reject(new Error("No se pudo cargar la vista previa."));
-        img.src = urlVistaPreviaActual;
-      });
-    }
-
-    async function enviarImagen(archivo) {
-      const wrap = document.getElementById("vision-resultado-wrap");
-      const box = document.getElementById("resultado-perros");
-      wrap.classList.remove("is-hidden");
-      box.className = "result-panel";
-      box.textContent = "Analizando imagen...";
-
-      try {
-        const imgEl = await establecerVistaPrevia(archivo);
-        const esMascota = await verificarEsMascota(imgEl);
-        if (!esMascota) {
-          box.className = "result-panel is-err";
-          box.textContent = "No se detectó un perro o gato en la imagen. Prueba con otra fotografía.";
-          return;
-        }
-
-        const formData = new FormData();
-        formData.append("file", archivo);
-
-        const res = await fetch(`${SERVIDOR}${RUTA_PERROS_GATOS}`, {
-          method: "POST",
-          headers: HEADERS_BASE,
-          body: formData,
-        });
-
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          box.className = "result-panel is-err";
-          box.textContent = data.error || `Error HTTP ${res.status}`;
-          return;
-        }
-
-        const etiqueta = data.clase || data.prediccion || data.nivel || "Resultado";
-        const prob = typeof data.probabilidad === "number"
-          ? `${(data.probabilidad * 100).toFixed(1)}%`
-          : "";
-
-        box.className = "result-panel is-ok";
-        box.innerHTML = `
-          <div class="result-kicker">Clasificación</div>
-          <div class="result-headline">${etiqueta}${prob ? ` · ${prob}` : ""}</div>
-        `;
-      } catch (err) {
-        box.className = "result-panel is-err";
-        box.textContent = `Error de predicción: ${err.message}`;
-      }
-    }
-
     async function encenderCamara() {
       const box = document.getElementById("resultado-perros");
       const wrap = document.getElementById("vision-resultado-wrap");
@@ -1089,21 +1040,15 @@
       }, "image/jpeg", 0.92);
     }
 
-    const CAMPOS_ADAPTABILIDAD = [
-      "Gender",
-      "Age",
-      "Education Level",
-      "Institution Type",
-      "IT Student",
-      "Location",
-      "Load-shedding",
-      "Financial Condition",
-      "Internet Type",
-      "Network Type",
-      "Class Duration",
-      "Self Lms",
-      "Device",
-    ];
+    function traducirNivelAdaptabilidad(valor) {
+      const mapa = {
+        "Low": "Baja",
+        "Moderate": "Moderada",
+        "Medium": "Media",
+        "High": "Alta"
+      };
+      return mapa[valor] || valor;
+    }
 
     async function evaluarAdaptabilidad() {
       const box = document.getElementById("resultado-estudiante");
@@ -1111,20 +1056,25 @@
       box.className = "result-panel spaced";
       box.textContent = "Calculando adaptabilidad...";
 
+      const campos = [
+        "Gender", "Age", "Education Level", "Institution Type",
+        "IT Student", "Location", "Load-shedding", "Financial Condition",
+        "Internet Type", "Network Type", "Class Duration", "Self Lms", "Device"
+      ];
+
       const payload = {};
-      for (const id of CAMPOS_ADAPTABILIDAD) {
-        const el = document.getElementById(id);
-        payload[id] = el ? el.value : "";
+      for (const id of campos) {
+        payload[id] = document.getElementById(id).value;
       }
 
       try {
-        const res = await fetch(`${SERVIDOR}${RUTA_ADAPTABILIDAD}`, {
+        const res = await fetch(`${SERVIDOR}/api/adaptabilidad`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            ...HEADERS_BASE,
+            ...HEADERS_BASE
           },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(payload)
         });
 
         const data = await res.json().catch(() => ({}));
@@ -1134,14 +1084,16 @@
           return;
         }
 
+        const nivelEs = traducirNivelAdaptabilidad(String(data.nivel || ""));
         const barrasHtml = Array.isArray(data.probabilidades)
           ? data.probabilidades
               .map(item => {
+                const nivelItemEs = traducirNivelAdaptabilidad(String(item.nivel || ""));
                 const pct = Math.max(0, Math.min(100, Number(item.prob || 0) * 100));
                 return `
                   <div class="metric-row">
                     <div class="metric-meta">
-                      <span>${item.nivel}</span>
+                      <span>${nivelItemEs}</span>
                       <span class="metric-val">${pct.toFixed(1)}%</span>
                     </div>
                     <div class="metric-track">
@@ -1156,7 +1108,7 @@
         box.className = "result-panel spaced is-ok";
         box.innerHTML = `
           <div class="result-kicker">Nivel estimado</div>
-          <div class="result-headline">${data.nivel}</div>
+          <div class="result-headline">${nivelEs}</div>
           ${barrasHtml}
         `;
       } catch (err) {
