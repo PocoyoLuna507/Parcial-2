@@ -989,6 +989,89 @@
     let streamActivo = null;
     let urlVistaPreviaActual = null;
 
+    function traducirEtiquetaMascota(etiqueta) {
+      const limpio = String(etiqueta || "").trim().toLowerCase();
+      if (limpio === "dog" || limpio === "perro") return "Perro";
+      if (limpio === "cat" || limpio === "gato") return "Gato";
+      return etiqueta || "Resultado";
+    }
+
+    function traducirNivelAdaptabilidad(valor) {
+      const mapa = {
+        "Low": "Baja",
+        "Moderate": "Moderada",
+        "Medium": "Media",
+        "High": "Alta"
+      };
+      return mapa[valor] || valor;
+    }
+
+    async function enviarImagen(archivo) {
+      const wrap = document.getElementById("vision-resultado-wrap");
+      const box = document.getElementById("resultado-perros");
+      const img = document.getElementById("vista-previa");
+
+      wrap.classList.remove("is-hidden");
+      box.className = "result-panel";
+      box.textContent = "Analizando imagen...";
+
+      if (urlVistaPreviaActual) {
+        URL.revokeObjectURL(urlVistaPreviaActual);
+      }
+      urlVistaPreviaActual = URL.createObjectURL(archivo);
+      img.src = urlVistaPreviaActual;
+
+      try {
+        await new Promise((resolve, reject) => {
+          if (img.complete && img.naturalWidth > 0) return resolve();
+          img.onload = () => resolve();
+          img.onerror = () => reject(new Error("No se pudo cargar la imagen."));
+        });
+
+        const esMascota = await verificarEsMascota(img);
+        if (!esMascota) {
+          box.className = "result-panel is-err";
+          box.textContent = "No se detectó un perro o gato en la imagen. Intenta con otra fotografía.";
+          return;
+        }
+
+        const nombreArchivo = archivo.name || "captura.jpg";
+        const formData = new FormData();
+        formData.append("imagen", archivo, nombreArchivo);
+        formData.append("file", archivo, nombreArchivo);
+
+        const res = await fetch(`${SERVIDOR}/api/perros-gatos`, {
+          method: "POST",
+          headers: HEADERS_BASE,
+          body: formData
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          box.className = "result-panel is-err";
+          box.textContent = data.error || `Error HTTP ${res.status} al clasificar la imagen.`;
+          return;
+        }
+
+        const etiquetaRaw = data.clase ?? data.prediccion ?? data.nivel ?? "Resultado";
+        const etiquetaEs = traducirEtiquetaMascota(etiquetaRaw);
+        const rawProb = data.probabilidad ?? data.confianza ?? data.prob;
+        const probNum = typeof rawProb === "number" ? rawProb : Number(rawProb);
+        const pctTexto = Number.isFinite(probNum)
+          ? ` · ${(probNum <= 1 ? probNum * 100 : probNum).toFixed(1)}%`
+          : "";
+
+        box.className = "result-panel is-ok";
+        box.innerHTML = `
+          <div class="result-kicker">Resultado de clasificación</div>
+          <div class="result-headline">${etiquetaEs}${pctTexto}</div>
+        `;
+      } catch (err) {
+        box.className = "result-panel is-err";
+        box.textContent = `Error de predicción: ${err.message}`;
+      }
+    }
+
     async function encenderCamara() {
       const box = document.getElementById("resultado-perros");
       const wrap = document.getElementById("vision-resultado-wrap");
@@ -1040,16 +1123,6 @@
       }, "image/jpeg", 0.92);
     }
 
-    function traducirNivelAdaptabilidad(valor) {
-      const mapa = {
-        "Low": "Baja",
-        "Moderate": "Moderada",
-        "Medium": "Media",
-        "High": "Alta"
-      };
-      return mapa[valor] || valor;
-    }
-
     async function evaluarAdaptabilidad() {
       const box = document.getElementById("resultado-estudiante");
       box.classList.remove("is-hidden");
@@ -1080,7 +1153,7 @@
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
           box.className = "result-panel spaced is-err";
-          box.textContent = data.error || `Error HTTP ${res.status}`;
+          box.textContent = data.error || `Error HTTP ${res.status} al calcular adaptabilidad.`;
           return;
         }
 
