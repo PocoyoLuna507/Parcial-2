@@ -864,22 +864,23 @@
     }
 
     const CLASES_PERRO_GATO = [
-      "dog", "terrier", "retriever", "shepherd", "hound", "spaniel", "poodle",
+      "dog", "puppy", "terrier", "retriever", "shepherd", "hound", "spaniel", "poodle",
       "bulldog", "chihuahua", "beagle", "boxer", "pug", "husky", "malamute",
       "dalmatian", "doberman", "rottweiler", "schnauzer", "corgi", "collie",
       "mastiff", "dane", "setter", "pointer", "greyhound", "whippet", "basenji",
       "chow", "pomeranian", "samoyed", "shih-tzu", "pekinese", "maltese",
       "papillon", "borzoi", "dachshund", "pinscher", "akita", "dingo",
+      "heeler", "cattle", "kelpie", "vizsla", "weimaraner",
       "cat", "tabby", "tiger cat", "persian cat", "siamese cat", "egyptian cat",
-      "lynx", "cougar", "kitten"
+      "lynx", "cougar", "kitten", "feline"
     ];
 
     async function verificarEsMascota(imgElement) {
       if (!detectorPreFiltro) return true;
-      const predicciones = await detectorPreFiltro.classify(imgElement, 5);
+      const predicciones = await detectorPreFiltro.classify(imgElement, 10);
       return predicciones.some(p => {
         const nombre = p.className.toLowerCase();
-        return p.probability >= 0.08 && CLASES_PERRO_GATO.some(clave => nombre.includes(clave));
+        return p.probability >= 0.02 && CLASES_PERRO_GATO.some(clave => nombre.includes(clave));
       });
     }
 
