@@ -64,7 +64,6 @@
       flex-direction: column;
     }
 
-    /* TOPBAR INSTITUCIONAL */
     .topbar {
       background: var(--bg-surface);
       border-bottom: 1px solid var(--border-hairline);
@@ -136,7 +135,6 @@
       user-select: none;
     }
 
-    /* CONTENEDOR PRINCIPAL */
     .shell {
       max-width: 980px;
       width: 100%;
@@ -169,7 +167,6 @@
       max-width: 580px;
     }
 
-    /* INDICADOR DE ESTADO */
     .status-pill {
       display: inline-flex;
       align-items: center;
@@ -213,7 +210,6 @@
       background: var(--err-dot);
     }
 
-    /* NAVEGACIÓN DE MODELOS (SEGMENTED CONTROL) */
     .nav-tabs {
       display: inline-flex;
       padding: 4px;
@@ -250,7 +246,6 @@
       box-shadow: 0 1px 3px rgba(11, 17, 32, 0.08), 0 1px 2px rgba(11, 17, 32, 0.04);
     }
 
-    /* TARJETA PRINCIPAL */
     .card {
       background: var(--bg-surface);
       border: 1px solid var(--border-hairline);
@@ -286,7 +281,6 @@
       padding: 28px;
     }
 
-    /* SWITCH DE MODO DE ENTRADA */
     .mode-switch {
       display: inline-flex;
       border: 1px solid var(--border-hairline);
@@ -316,7 +310,6 @@
       box-shadow: 0 1px 2px rgba(11, 17, 32, 0.06);
     }
 
-    /* DROPZONE */
     .dropzone {
       border: 1.5px dashed var(--border-strong);
       border-radius: var(--radius-lg);
@@ -369,7 +362,6 @@
       display: none;
     }
 
-    /* CÁMARA */
     .camera-stage {
       background: #090d16;
       border-radius: var(--radius-lg);
@@ -401,7 +393,6 @@
       color: #94a3b8;
     }
 
-    /* VISTA PREVIA + RESULTADO LADO A LADO EN ESCRITORIO */
     .vision-output {
       margin-top: 24px;
       display: grid;
@@ -434,7 +425,6 @@
       display: block;
     }
 
-    /* FORMULARIO DE 13 CAMPOS */
     .form-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -478,7 +468,6 @@
       box-shadow: 0 0 0 3px var(--accent-ring);
     }
 
-    /* BOTONES */
     .btn {
       appearance: none;
       border: 0;
@@ -525,7 +514,6 @@
       font-size: 0.9375rem;
     }
 
-    /* PANEL DE RESULTADO */
     .result-panel {
       border-radius: var(--radius-lg);
       border: 1px solid var(--border-hairline);
@@ -607,7 +595,6 @@
       transition: width 0.45s var(--ease-out);
     }
 
-    /* FOOTER */
     .footer {
       border-top: 1px solid var(--border-hairline);
       background: var(--bg-surface);
@@ -849,11 +836,11 @@
   </footer>
 
   <script>
-    // Reemplaza por tu URL activa (sin "/" al final)
     const SERVIDOR = "https://shine-relocate-skipping.ngrok-free.dev";
+    const RUTA_ADAPTABILIDAD = "/api/adaptabilidad"; // Debe coincidir exactamente con tu @app.post(...) en Flask
+    const RUTA_PERROS_GATOS = "/api/perros-gatos";
     const HEADERS_BASE = { "ngrok-skip-browser-warning": "true" };
 
-    // Detector previo para filtrar fotos que no contienen perros ni gatos
     let detectorPreFiltro = null;
     if (window.mobilenet) {
       mobilenet.load().then(modelo => {
@@ -863,7 +850,6 @@
       });
     }
 
-    // Clases de ImageNet (MobileNet): razas de perro y gato
     const CLASES_PERRO_GATO = new Set([
       "Chihuahua", "Japanese spaniel", "Maltese dog, Maltese terrier, Maltese", "Pekinese, Pekingese, Peke",
       "Shih-Tzu", "Blenheim spaniel", "papillon", "toy terrier", "Rhodesian ridgeback",
@@ -961,7 +947,6 @@
       if (modo === "subir") detenerCamara();
     }
 
-    // Drag & drop en la zona de archivo
     const dropzone = document.getElementById("zona-archivo");
     ["dragenter", "dragover"].forEach(evt => {
       dropzone.addEventListener(evt, e => {
@@ -1024,7 +1009,7 @@
         const formData = new FormData();
         formData.append("file", archivo);
 
-        const res = await fetch(`${SERVIDOR}/api/perros-gatos`, {
+        const res = await fetch(`${SERVIDOR}${RUTA_PERROS_GATOS}`, {
           method: "POST",
           headers: HEADERS_BASE,
           body: formData,
@@ -1133,7 +1118,7 @@
       }
 
       try {
-        const res = await fetch(`${SERVIDOR}/api/adaptabilidad`, {
+        const res = await fetch(`${SERVIDOR}${RUTA_ADAPTABILIDAD}`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
