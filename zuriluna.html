@@ -849,7 +849,7 @@
   </footer>
 
   <script>
-    // Reemplaza por tu URL activa de ngrok o servidor (sin "/" al final)
+    // Reemplaza por tu URL activa (sin "/" al final)
     const SERVIDOR = "https://shine-relocate-skipping.ngrok-free.dev";
     const HEADERS_BASE = { "ngrok-skip-browser-warning": "true" };
 
@@ -863,7 +863,7 @@
       });
     }
 
-    // Clases de ImageNet (MobileNet): razas de perro y gatos domésticos
+    // Clases de ImageNet (MobileNet): 118 razas de perro (151-268) y 5 de gato (281-285)
     const CLASES_PERRO_GATO = new Set([
       "Chihuahua", "Japanese spaniel", "Maltese dog, Maltese terrier, Maltese", "Pekinese, Pekingese, Peke",
       "Shih-Tzu", "Blenheim spaniel", "papillon", "toy terrier", "Rhodesian ridgeback",
@@ -898,7 +898,7 @@
       "Samoyed, Samoyede", "Pomeranian", "chow, chow chow", "keeshond", "Brabancon griffon",
       "Pembroke, Pembroke Welsh corgi", "Cardigan, Cardigan Welsh corgi", "toy poodle", "miniature poodle",
       "standard poodle", "Mexican hairless", "tabby, tabby cat", "tiger cat", "Persian cat",
-      "Siamese cat, Siamese", "Egyptian cat", "lynx, catamount"
+      "Siamese cat, Siamese", "Egyptian cat"
     ]);
 
     function esClasePerroOGato(nombreClase) {
@@ -920,7 +920,8 @@
     async function verificarEsMascota(imgElement) {
       if (!detectorPreFiltro) return true;
       try {
-        const predicciones = await detectorPreFiltro.classify(imgElement, 20);
+        const predicciones = await detectorPreFiltro.classify(imgElement, 25);
+        console.log("MobileNet:", predicciones.map(p => p.className + " " + p.probability.toFixed(3)));
         const probMascota = predicciones
           .filter(p => esClasePerroOGato(p.className))
           .reduce((acc, p) => acc + p.probability, 0);
@@ -961,6 +962,7 @@
       if (modo === "subir") detenerCamara();
     }
 
+    // Drag & drop en la zona de archivo
     const dropzone = document.getElementById("zona-archivo");
     ["dragenter", "dragover"].forEach(evt => {
       dropzone.addEventListener(evt, e => {
