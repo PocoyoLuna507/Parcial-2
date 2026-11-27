@@ -662,10 +662,10 @@
     </div>
 
     <nav class="nav-tabs" aria-label="Modelos disponibles">
-      <button id="tab-perros" class="nav-tab is-active" onclick="cambiarModelo('perros')">
+      <button id="tab-perros" type="button" class="nav-tab is-active" onclick="cambiarModelo('perros')">
         Perros y Gatos
       </button>
-      <button id="tab-estudiante" class="nav-tab" onclick="cambiarModelo('estudiante')">
+      <button id="tab-estudiante" type="button" class="nav-tab" onclick="cambiarModelo('estudiante')">
         Adaptabilidad del Estudiante
       </button>
     </nav>
@@ -679,8 +679,8 @@
         </div>
 
         <div class="mode-switch" role="group" aria-label="Origen de imagen">
-          <button id="btn-modo-subir" class="mode-btn is-active" onclick="cambiarModoImagen('subir')">Archivo</button>
-          <button id="btn-modo-camara" class="mode-btn" onclick="cambiarModoImagen('camara')">Cámara</button>
+          <button id="btn-modo-subir" type="button" class="mode-btn is-active" onclick="cambiarModoImagen('subir')">Archivo</button>
+          <button id="btn-modo-camara" type="button" class="mode-btn" onclick="cambiarModoImagen('camara')">Cámara</button>
         </div>
       </div>
 
@@ -849,7 +849,7 @@
   </footer>
 
   <script>
-    // Reemplaza por tu URL activa (sin "/" al final)
+    // Reemplaza por tu URL activa de ngrok o servidor (sin "/" al final)
     const SERVIDOR = "https://shine-relocate-skipping.ngrok-free.dev";
     const HEADERS_BASE = { "ngrok-skip-browser-warning": "true" };
 
@@ -863,7 +863,7 @@
       });
     }
 
-    // Clases de ImageNet (MobileNet): 118 razas de perro (151-268) y 5 de gato (281-285)
+    // Clases de ImageNet (MobileNet): razas de perro y gatos domésticos
     const CLASES_PERRO_GATO = new Set([
       "Chihuahua", "Japanese spaniel", "Maltese dog, Maltese terrier, Maltese", "Pekinese, Pekingese, Peke",
       "Shih-Tzu", "Blenheim spaniel", "papillon", "toy terrier", "Rhodesian ridgeback",
@@ -898,18 +898,36 @@
       "Samoyed, Samoyede", "Pomeranian", "chow, chow chow", "keeshond", "Brabancon griffon",
       "Pembroke, Pembroke Welsh corgi", "Cardigan, Cardigan Welsh corgi", "toy poodle", "miniature poodle",
       "standard poodle", "Mexican hairless", "tabby, tabby cat", "tiger cat", "Persian cat",
-      "Siamese cat, Siamese", "Egyptian cat"
+      "Siamese cat, Siamese", "Egyptian cat", "lynx, catamount"
     ]);
+
+    function esClasePerroOGato(nombreClase) {
+      if (CLASES_PERRO_GATO.has(nombreClase)) return true;
+      const lower = nombreClase.toLowerCase();
+      return (
+        lower.includes("cat") ||
+        lower.includes("dog") ||
+        lower.includes("terrier") ||
+        lower.includes("retriever") ||
+        lower.includes("spaniel") ||
+        lower.includes("hound") ||
+        lower.includes("shepherd") ||
+        lower.includes("bulldog") ||
+        lower.includes("poodle")
+      );
+    }
 
     async function verificarEsMascota(imgElement) {
       if (!detectorPreFiltro) return true;
-      const predicciones = await detectorPreFiltro.classify(imgElement, 50);
-      console.log("MobileNet:", predicciones.map(p => p.className + " " + p.probability.toFixed(3)));
-      // Suma la probabilidad de todas las razas de perro/gato: una raza dudosa no descarta la foto
-      const probMascota = predicciones
-        .filter(p => CLASES_PERRO_GATO.has(p.className))
-        .reduce((acc, p) => acc + p.probability, 0);
-      return probMascota >= 0.10;
+      try {
+        const predicciones = await detectorPreFiltro.classify(imgElement, 20);
+        const probMascota = predicciones
+          .filter(p => esClasePerroOGato(p.className))
+          .reduce((acc, p) => acc + p.probability, 0);
+        return probMascota >= 0.05;
+      } catch {
+        return true;
+      }
     }
 
     async function comprobarSalud() {
@@ -943,7 +961,6 @@
       if (modo === "subir") detenerCamara();
     }
 
-    // Drag & drop en la zona de archivo
     const dropzone = document.getElementById("zona-archivo");
     ["dragenter", "dragover"].forEach(evt => {
       dropzone.addEventListener(evt, e => {
@@ -965,16 +982,20 @@
     });
 
     function analizarArchivoSeleccionado() {
-      const archivo = document.getElementById("foto").files[0];
+      const input = document.getElementById("foto");
+      const archivo = input.files && input.files[0];
       if (archivo) enviarImagen(archivo);
+      input.value = "";
     }
 
     let streamActivo = null;
+    let urlVistaPreviaActual = null;
 
     async function encenderCamara() {
       const box = document.getElementById("resultado-perros");
       const wrap = document.getElementById("vision-resultado-wrap");
       try {
+        detenerCamara();
         streamActivo = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
         document.getElementById("video").srcObject = streamActivo;
       } catch {
@@ -1022,7 +1043,8 @@
     }
 
     function barraHtml(etiqueta, porcentaje) {
-      const pct = Number(porcentaje).toFixed(1);
+      const pctNum = Math.max(0, Math.min(100, Number(porcentaje) || 0));
+      const pct = pctNum.toFixed(1);
       return `
         <div class="metric-row">
           <div class="metric-meta">
@@ -1036,113 +1058,138 @@
       `;
     }
 
-    async function enviarImagen(imagen) {
+    async function enviarImagen(archivoOBlob) {
       const wrap = document.getElementById("vision-resultado-wrap");
-      const preview = document.getElementById("vista-previa");
       const box = document.getElementById("resultado-perros");
+      const preview = document.getElementById("vista-previa");
 
-      preview.src = URL.createObjectURL(imagen);
+      if (urlVistaPreviaActual) {
+        URL.revokeObjectURL(urlVistaPreviaActual);
+      }
+      urlVistaPreviaActual = URL.createObjectURL(archivoOBlob);
+      preview.src = urlVistaPreviaActual;
       wrap.classList.remove("is-hidden");
       box.className = "result-panel";
-      box.innerHTML = `<div class="result-kicker">Procesando</div><div style="font-size:0.875rem;color:var(--ink-secondary)">Verificando contenido de la imagen...</div>`;
+      box.innerHTML = `<div class="result-kicker">Procesando</div><div>Verificando imagen y ejecutando inferencia...</div>`;
 
-      await new Promise(resolve => {
-        if (preview.complete) resolve();
-        else preview.onload = resolve;
+      await new Promise((resolve) => {
+        if (preview.complete && preview.naturalWidth > 0) return resolve();
+        preview.onload = () => resolve();
+        preview.onerror = () => resolve();
       });
 
-      const esValida = await verificarEsMascota(preview);
-      if (!esValida) {
+      const esMascota = await verificarEsMascota(preview);
+      if (!esMascota) {
         box.className = "result-panel is-err";
         box.innerHTML = `
-          <div class="result-kicker">No clasificado</div>
-          <div class="result-headline" style="color:var(--err-text);margin-bottom:6px;">No se detectó un perro ni un gato</div>
-          <div style="font-size:0.8125rem;">
-            La imagen capturada o subida no corresponde a un perro ni a un gato. Enfoca directamente a la mascota e inténtalo de nuevo.
-          </div>
+          <div class="result-kicker">Entrada rechazada</div>
+          <div>No se detectó un perro o gato claro en la imagen. Prueba con otra fotografía.</div>
         `;
         return;
       }
 
-      box.innerHTML = `<div class="result-kicker">Procesando</div><div style="font-size:0.875rem;color:var(--ink-secondary)">Clasificando con tu modelo...</div>`;
-
-      const formData = new FormData();
-      formData.append("imagen", imagen, "captura.jpg");
-
       try {
+        const formData = new FormData();
+        formData.append("imagen", archivoOBlob, "imagen.jpg");
+
         const res = await fetch(`${SERVIDOR}/api/perros-gatos`, {
           method: "POST",
-          body: formData,
-          headers: HEADERS_BASE
+          headers: HEADERS_BASE,
+          body: formData
         });
-        if (!res.ok) throw new Error("Respuesta inválida");
-        const data = await res.json();
 
-        const confianza = Number(data.confianza ?? 0);
-        const esPerro = data.etiqueta === "perro";
-        const etiquetaTexto = esPerro ? "Perro" : "Gato";
-        const confianzaPct = (confianza * 100).toFixed(1);
-        const pPerro = ((data.prob_perro ?? (esPerro ? confianza : 1 - confianza)) * 100);
-        const pGato = ((data.prob_gato ?? (!esPerro ? confianza : 1 - confianza)) * 100);
+        if (!res.ok) {
+          throw new Error(`Error del servidor (HTTP ${res.status})`);
+        }
+
+        const data = await res.json();
+        const rawPerro = Number(data.prob_perro ?? 0);
+        const rawGato  = Number(data.prob_gato ?? 0);
+        const probPerroPct = rawPerro <= 1 ? rawPerro * 100 : rawPerro;
+        const probGatoPct  = rawGato <= 1 ? rawGato * 100 : rawGato;
+
+        const etiqueta = data.etiqueta
+          ? String(data.etiqueta).charAt(0).toUpperCase() + String(data.etiqueta).slice(1)
+          : (probPerroPct >= probGatoPct ? "Perro" : "Gato");
+
+        const rawConf = Number(data.confianza ?? Math.max(probPerroPct, probGatoPct));
+        const confPct = rawConf <= 1 ? rawConf * 100 : rawConf;
 
         box.className = "result-panel is-ok";
         box.innerHTML = `
           <div class="result-kicker">Predicción completada</div>
-          <div class="result-headline">${etiquetaTexto} · ${confianzaPct}% de confianza</div>
-          ${barraHtml("Perro", pPerro)}
-          ${barraHtml("Gato", pGato)}
+          <div class="result-headline">${etiqueta} · ${confPct.toFixed(1)}% de confianza</div>
+          ${barraHtml("Perro", probPerroPct)}
+          ${barraHtml("Gato", probGatoPct)}
         `;
-      } catch {
+      } catch (err) {
         box.className = "result-panel is-err";
-        box.textContent = "Error al comunicarse con el servidor. Verifica que esté activo y que SERVIDOR sea correcto.";
+        box.innerHTML = `
+          <div class="result-kicker">Error de inferencia</div>
+          <div>${err.message || "No se pudo completar la clasificación con el backend."}</div>
+        `;
       }
     }
 
-    const COLUMNAS = [
-      "Gender", "Age", "Education Level", "Institution Type",
-      "IT Student", "Location", "Load-shedding", "Financial Condition",
-      "Internet Type", "Network Type", "Class Duration", "Self Lms", "Device"
-    ];
-
-    const TRADUCCION_NIVEL = {
-      High: "Alta",
-      Moderate: "Moderada",
-      Low: "Baja"
-    };
-
     async function evaluarAdaptabilidad() {
       const box = document.getElementById("resultado-estudiante");
+      box.classList.remove("is-hidden");
       box.className = "result-panel spaced";
-      box.innerHTML = `<div class="result-kicker">Procesando</div><div style="font-size:0.875rem;color:var(--ink-secondary)">Calculando probabilidades...</div>`;
+      box.innerHTML = `<div class="result-kicker">Calculando</div><div>Enviando perfil del estudiante al modelo...</div>`;
+
+      const ids = [
+        "Gender", "Age", "Education Level", "Institution Type",
+        "IT Student", "Location", "Load-shedding", "Financial Condition",
+        "Internet Type", "Network Type", "Class Duration", "Self Lms", "Device"
+      ];
 
       const payload = {};
-      for (const col of COLUMNAS) {
-        payload[col] = document.getElementById(col).value;
-      }
+      ids.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) payload[id] = el.value;
+      });
 
       try {
-        const res = await fetch(`${SERVIDOR}/api/adaptabilidad`, {
+        const res = await fetch(`${SERVIDOR}/api/estudiante`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...HEADERS_BASE },
+          headers: {
+            ...HEADERS_BASE,
+            "Content-Type": "application/json"
+          },
           body: JSON.stringify(payload)
         });
-        if (!res.ok) throw new Error("Respuesta inválida");
-        const data = await res.json();
 
-        const nivelLegible = TRADUCCION_NIVEL[data.nivel] || data.nivel;
-        const distribucion = (data.probabilidades || [])
-          .map(item => barraHtml(`Adaptabilidad ${TRADUCCION_NIVEL[item.nivel] || item.nivel}`, item.prob * 100))
-          .join("");
+        if (!res.ok) {
+          throw new Error(`Error del servidor (HTTP ${res.status})`);
+        }
+
+        const data = await res.json();
+        const clasePredicha = data.adaptability || data.prediccion || data.etiqueta || data.clase || "Sin etiqueta";
+        const probs = data.probabilidades || data.probs || null;
+
+        let barras = "";
+        if (probs && typeof probs === "object") {
+          barras = Object.entries(probs)
+            .map(([k, v]) => barraHtml(k, Number(v) <= 1 ? Number(v) * 100 : Number(v)))
+            .join("");
+        }
+
+        const confTexto = data.confianza != null
+          ? ` · ${(Number(data.confianza) <= 1 ? Number(data.confianza) * 100 : Number(data.confianza)).toFixed(1)}%`
+          : "";
 
         box.className = "result-panel spaced is-ok";
         box.innerHTML = `
-          <div class="result-kicker">Resultado del modelo</div>
-          <div class="result-headline">Nivel estimado: ${nivelLegible}</div>
-          ${distribucion}
+          <div class="result-kicker">Predicción completada</div>
+          <div class="result-headline">Adaptabilidad: ${clasePredicha}${confTexto}</div>
+          ${barras}
         `;
-      } catch {
+      } catch (err) {
         box.className = "result-panel spaced is-err";
-        box.textContent = "Error al comunicarse con el servidor. Verifica que esté activo y que SERVIDOR sea correcto.";
+        box.innerHTML = `
+          <div class="result-kicker">Error de predicción</div>
+          <div>${err.message || "No se pudo consultar el modelo de adaptabilidad."}</div>
+        `;
       }
     }
   </script>
