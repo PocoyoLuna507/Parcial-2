@@ -863,7 +863,7 @@
       });
     }
 
-    // Clases de ImageNet (MobileNet): 118 razas de perro (151-268) y 5 de gato (281-285)
+    // Clases de ImageNet (MobileNet): razas de perro y gato
     const CLASES_PERRO_GATO = new Set([
       "Chihuahua", "Japanese spaniel", "Maltese dog, Maltese terrier, Maltese", "Pekinese, Pekingese, Peke",
       "Shih-Tzu", "Blenheim spaniel", "papillon", "toy terrier", "Rhodesian ridgeback",
@@ -921,7 +921,6 @@
       if (!detectorPreFiltro) return true;
       try {
         const predicciones = await detectorPreFiltro.classify(imgElement, 25);
-        console.log("MobileNet:", predicciones.map(p => p.className + " " + p.probability.toFixed(3)));
         const probMascota = predicciones
           .filter(p => esClasePerroOGato(p.className))
           .reduce((acc, p) => acc + p.probability, 0);
@@ -993,6 +992,67 @@
     let streamActivo = null;
     let urlVistaPreviaActual = null;
 
+    function establecerVistaPrevia(blobOArchivo) {
+      if (urlVistaPreviaActual) {
+        URL.revokeObjectURL(urlVistaPreviaActual);
+      }
+      urlVistaPreviaActual = URL.createObjectURL(blobOArchivo);
+      const img = document.getElementById("vista-previa");
+      return new Promise((resolve, reject) => {
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error("No se pudo cargar la vista previa."));
+        img.src = urlVistaPreviaActual;
+      });
+    }
+
+    async function enviarImagen(archivo) {
+      const wrap = document.getElementById("vision-resultado-wrap");
+      const box = document.getElementById("resultado-perros");
+      wrap.classList.remove("is-hidden");
+      box.className = "result-panel";
+      box.textContent = "Analizando imagen...";
+
+      try {
+        const imgEl = await establecerVistaPrevia(archivo);
+        const esMascota = await verificarEsMascota(imgEl);
+        if (!esMascota) {
+          box.className = "result-panel is-err";
+          box.textContent = "No se detectó un perro o gato en la imagen. Prueba con otra fotografía.";
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", archivo);
+
+        const res = await fetch(`${SERVIDOR}/api/perros-gatos`, {
+          method: "POST",
+          headers: HEADERS_BASE,
+          body: formData,
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          box.className = "result-panel is-err";
+          box.textContent = data.error || `Error HTTP ${res.status}`;
+          return;
+        }
+
+        const etiqueta = data.clase || data.prediccion || data.nivel || "Resultado";
+        const prob = typeof data.probabilidad === "number"
+          ? `${(data.probabilidad * 100).toFixed(1)}%`
+          : "";
+
+        box.className = "result-panel is-ok";
+        box.innerHTML = `
+          <div class="result-kicker">Clasificación</div>
+          <div class="result-headline">${etiqueta}${prob ? ` · ${prob}` : ""}</div>
+        `;
+      } catch (err) {
+        box.className = "result-panel is-err";
+        box.textContent = `Error de predicción: ${err.message}`;
+      }
+    }
+
     async function encenderCamara() {
       const box = document.getElementById("resultado-perros");
       const wrap = document.getElementById("vision-resultado-wrap");
@@ -1037,161 +1097,86 @@
         if (!blob || blob.size < 2000) {
           wrap.classList.remove("is-hidden");
           box.className = "result-panel is-err";
-          box.textContent = "No se pudo capturar una fotografía válida desde la cámara.";
+          box.textContent = "No se pudo capturar una imagen válida desde la cámara.";
           return;
         }
         enviarImagen(blob);
       }, "image/jpeg", 0.92);
     }
 
-    function barraHtml(etiqueta, porcentaje) {
-      const pctNum = Math.max(0, Math.min(100, Number(porcentaje) || 0));
-      const pct = pctNum.toFixed(1);
-      return `
-        <div class="metric-row">
-          <div class="metric-meta">
-            <span>${etiqueta}</span>
-            <span class="metric-val">${pct}%</span>
-          </div>
-          <div class="metric-track">
-            <div class="metric-fill" style="width: ${pct}%"></div>
-          </div>
-        </div>
-      `;
-    }
-
-    async function enviarImagen(archivoOBlob) {
-      const wrap = document.getElementById("vision-resultado-wrap");
-      const box = document.getElementById("resultado-perros");
-      const preview = document.getElementById("vista-previa");
-
-      if (urlVistaPreviaActual) {
-        URL.revokeObjectURL(urlVistaPreviaActual);
-      }
-      urlVistaPreviaActual = URL.createObjectURL(archivoOBlob);
-      preview.src = urlVistaPreviaActual;
-      wrap.classList.remove("is-hidden");
-      box.className = "result-panel";
-      box.innerHTML = `<div class="result-kicker">Procesando</div><div>Verificando imagen y ejecutando inferencia...</div>`;
-
-      await new Promise((resolve) => {
-        if (preview.complete && preview.naturalWidth > 0) return resolve();
-        preview.onload = () => resolve();
-        preview.onerror = () => resolve();
-      });
-
-      const esMascota = await verificarEsMascota(preview);
-      if (!esMascota) {
-        box.className = "result-panel is-err";
-        box.innerHTML = `
-          <div class="result-kicker">Entrada rechazada</div>
-          <div>No se detectó un perro o gato claro en la imagen. Prueba con otra fotografía.</div>
-        `;
-        return;
-      }
-
-      try {
-        const formData = new FormData();
-        formData.append("imagen", archivoOBlob, "imagen.jpg");
-
-        const res = await fetch(`${SERVIDOR}/api/perros-gatos`, {
-          method: "POST",
-          headers: HEADERS_BASE,
-          body: formData
-        });
-
-        if (!res.ok) {
-          throw new Error(`Error del servidor (HTTP ${res.status})`);
-        }
-
-        const data = await res.json();
-        const rawPerro = Number(data.prob_perro ?? 0);
-        const rawGato  = Number(data.prob_gato ?? 0);
-        const probPerroPct = rawPerro <= 1 ? rawPerro * 100 : rawPerro;
-        const probGatoPct  = rawGato <= 1 ? rawGato * 100 : rawGato;
-
-        const etiqueta = data.etiqueta
-          ? String(data.etiqueta).charAt(0).toUpperCase() + String(data.etiqueta).slice(1)
-          : (probPerroPct >= probGatoPct ? "Perro" : "Gato");
-
-        const rawConf = Number(data.confianza ?? Math.max(probPerroPct, probGatoPct));
-        const confPct = rawConf <= 1 ? rawConf * 100 : rawConf;
-
-        box.className = "result-panel is-ok";
-        box.innerHTML = `
-          <div class="result-kicker">Predicción completada</div>
-          <div class="result-headline">${etiqueta} · ${confPct.toFixed(1)}% de confianza</div>
-          ${barraHtml("Perro", probPerroPct)}
-          ${barraHtml("Gato", probGatoPct)}
-        `;
-      } catch (err) {
-        box.className = "result-panel is-err";
-        box.innerHTML = `
-          <div class="result-kicker">Error de inferencia</div>
-          <div>${err.message || "No se pudo completar la clasificación con el backend."}</div>
-        `;
-      }
-    }
+    const CAMPOS_ADAPTABILIDAD = [
+      "Gender",
+      "Age",
+      "Education Level",
+      "Institution Type",
+      "IT Student",
+      "Location",
+      "Load-shedding",
+      "Financial Condition",
+      "Internet Type",
+      "Network Type",
+      "Class Duration",
+      "Self Lms",
+      "Device",
+    ];
 
     async function evaluarAdaptabilidad() {
       const box = document.getElementById("resultado-estudiante");
       box.classList.remove("is-hidden");
       box.className = "result-panel spaced";
-      box.innerHTML = `<div class="result-kicker">Calculando</div><div>Enviando perfil del estudiante al modelo...</div>`;
-
-      const ids = [
-        "Gender", "Age", "Education Level", "Institution Type",
-        "IT Student", "Location", "Load-shedding", "Financial Condition",
-        "Internet Type", "Network Type", "Class Duration", "Self Lms", "Device"
-      ];
+      box.textContent = "Calculando adaptabilidad...";
 
       const payload = {};
-      ids.forEach((id) => {
+      for (const id of CAMPOS_ADAPTABILIDAD) {
         const el = document.getElementById(id);
-        if (el) payload[id] = el.value;
-      });
+        payload[id] = el ? el.value : "";
+      }
 
       try {
-        const res = await fetch(`${SERVIDOR}/api/estudiante`, {
+        const res = await fetch(`${SERVIDOR}/api/adaptabilidad`, {
           method: "POST",
           headers: {
+            "Content-Type": "application/json",
             ...HEADERS_BASE,
-            "Content-Type": "application/json"
           },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(payload),
         });
 
+        const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-          throw new Error(`Error del servidor (HTTP ${res.status})`);
+          box.className = "result-panel spaced is-err";
+          box.textContent = data.error || `Error HTTP ${res.status}`;
+          return;
         }
 
-        const data = await res.json();
-        const clasePredicha = data.adaptability || data.prediccion || data.etiqueta || data.clase || "Sin etiqueta";
-        const probs = data.probabilidades || data.probs || null;
-
-        let barras = "";
-        if (probs && typeof probs === "object") {
-          barras = Object.entries(probs)
-            .map(([k, v]) => barraHtml(k, Number(v) <= 1 ? Number(v) * 100 : Number(v)))
-            .join("");
-        }
-
-        const confTexto = data.confianza != null
-          ? ` · ${(Number(data.confianza) <= 1 ? Number(data.confianza) * 100 : Number(data.confianza)).toFixed(1)}%`
+        const barrasHtml = Array.isArray(data.probabilidades)
+          ? data.probabilidades
+              .map(item => {
+                const pct = Math.max(0, Math.min(100, Number(item.prob || 0) * 100));
+                return `
+                  <div class="metric-row">
+                    <div class="metric-meta">
+                      <span>${item.nivel}</span>
+                      <span class="metric-val">${pct.toFixed(1)}%</span>
+                    </div>
+                    <div class="metric-track">
+                      <div class="metric-fill" style="width: ${pct.toFixed(1)}%"></div>
+                    </div>
+                  </div>
+                `;
+              })
+              .join("")
           : "";
 
         box.className = "result-panel spaced is-ok";
         box.innerHTML = `
-          <div class="result-kicker">Predicción completada</div>
-          <div class="result-headline">Adaptabilidad: ${clasePredicha}${confTexto}</div>
-          ${barras}
+          <div class="result-kicker">Nivel estimado</div>
+          <div class="result-headline">${data.nivel}</div>
+          ${barrasHtml}
         `;
       } catch (err) {
         box.className = "result-panel spaced is-err";
-        box.innerHTML = `
-          <div class="result-kicker">Error de predicción</div>
-          <div>${err.message || "No se pudo consultar el modelo de adaptabilidad."}</div>
-        `;
+        box.textContent = `Error de predicción: ${err.message}`;
       }
     }
   </script>
