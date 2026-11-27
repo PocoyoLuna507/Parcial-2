@@ -863,25 +863,53 @@
       });
     }
 
-    const CLASES_PERRO_GATO = [
-      "dog", "puppy", "terrier", "retriever", "shepherd", "hound", "spaniel", "poodle",
-      "bulldog", "chihuahua", "beagle", "boxer", "pug", "husky", "malamute",
-      "dalmatian", "doberman", "rottweiler", "schnauzer", "corgi", "collie",
-      "mastiff", "dane", "setter", "pointer", "greyhound", "whippet", "basenji",
-      "chow", "pomeranian", "samoyed", "shih-tzu", "pekinese", "maltese",
-      "papillon", "borzoi", "dachshund", "pinscher", "akita", "dingo",
-      "heeler", "cattle", "kelpie", "vizsla", "weimaraner",
-      "cat", "tabby", "tiger cat", "persian cat", "siamese cat", "egyptian cat",
-      "lynx", "cougar", "kitten", "feline"
-    ];
+    // Clases de ImageNet (MobileNet): 118 razas de perro (151-268) y 5 de gato (281-285)
+    const CLASES_PERRO_GATO = new Set([
+      "Chihuahua", "Japanese spaniel", "Maltese dog, Maltese terrier, Maltese", "Pekinese, Pekingese, Peke",
+      "Shih-Tzu", "Blenheim spaniel", "papillon", "toy terrier", "Rhodesian ridgeback",
+      "Afghan hound, Afghan", "basset, basset hound", "beagle", "bloodhound, sleuthhound", "bluetick",
+      "black-and-tan coonhound", "Walker hound, Walker foxhound", "English foxhound", "redbone",
+      "borzoi, Russian wolfhound", "Irish wolfhound", "Italian greyhound", "whippet",
+      "Ibizan hound, Ibizan Podenco", "Norwegian elkhound, elkhound", "otterhound, otter hound",
+      "Saluki, gazelle hound", "Scottish deerhound, deerhound", "Weimaraner",
+      "Staffordshire bullterrier, Staffordshire bull terrier",
+      "American Staffordshire terrier, Staffordshire terrier, American pit bull terrier, pit bull terrier",
+      "Bedlington terrier", "Border terrier", "Kerry blue terrier", "Irish terrier", "Norfolk terrier",
+      "Norwich terrier", "Yorkshire terrier", "wire-haired fox terrier", "Lakeland terrier",
+      "Sealyham terrier, Sealyham", "Airedale, Airedale terrier", "cairn, cairn terrier",
+      "Australian terrier", "Dandie Dinmont, Dandie Dinmont terrier", "Boston bull, Boston terrier",
+      "miniature schnauzer", "giant schnauzer", "standard schnauzer",
+      "Scotch terrier, Scottish terrier, Scottie", "Tibetan terrier, chrysanthemum dog",
+      "silky terrier, Sydney silky", "soft-coated wheaten terrier", "West Highland white terrier",
+      "Lhasa, Lhasa apso", "flat-coated retriever", "curly-coated retriever", "golden retriever",
+      "Labrador retriever", "Chesapeake Bay retriever", "German short-haired pointer",
+      "vizsla, Hungarian pointer", "English setter", "Irish setter, red setter", "Gordon setter",
+      "Brittany spaniel", "clumber, clumber spaniel", "English springer, English springer spaniel",
+      "Welsh springer spaniel", "cocker spaniel, English cocker spaniel, cocker", "Sussex spaniel",
+      "Irish water spaniel", "kuvasz", "schipperke", "groenendael", "malinois", "briard", "kelpie",
+      "komondor", "Old English sheepdog, bobtail", "Shetland sheepdog, Shetland sheep dog, Shetland",
+      "collie", "Border collie", "Bouvier des Flandres, Bouviers des Flandres", "Rottweiler",
+      "German shepherd, German shepherd dog, German police dog, alsatian", "Doberman, Doberman pinscher",
+      "miniature pinscher", "Greater Swiss Mountain dog", "Bernese mountain dog", "Appenzeller",
+      "EntleBucher", "boxer", "bull mastiff", "Tibetan mastiff", "French bulldog", "Great Dane",
+      "Saint Bernard, St Bernard", "Eskimo dog, husky", "malamute, malemute, Alaskan malamute",
+      "Siberian husky", "dalmatian, coach dog, carriage dog", "affenpinscher, monkey pinscher, monkey dog",
+      "basenji", "pug, pug-dog", "Leonberg", "Newfoundland, Newfoundland dog", "Great Pyrenees",
+      "Samoyed, Samoyede", "Pomeranian", "chow, chow chow", "keeshond", "Brabancon griffon",
+      "Pembroke, Pembroke Welsh corgi", "Cardigan, Cardigan Welsh corgi", "toy poodle", "miniature poodle",
+      "standard poodle", "Mexican hairless", "tabby, tabby cat", "tiger cat", "Persian cat",
+      "Siamese cat, Siamese", "Egyptian cat"
+    ]);
 
     async function verificarEsMascota(imgElement) {
       if (!detectorPreFiltro) return true;
-      const predicciones = await detectorPreFiltro.classify(imgElement, 10);
-      return predicciones.some(p => {
-        const nombre = p.className.toLowerCase();
-        return p.probability >= 0.02 && CLASES_PERRO_GATO.some(clave => nombre.includes(clave));
-      });
+      const predicciones = await detectorPreFiltro.classify(imgElement, 50);
+      console.log("MobileNet:", predicciones.map(p => p.className + " " + p.probability.toFixed(3)));
+      // Suma la probabilidad de todas las razas de perro/gato: una raza dudosa no descarta la foto
+      const probMascota = predicciones
+        .filter(p => CLASES_PERRO_GATO.has(p.className))
+        .reduce((acc, p) => acc + p.probability, 0);
+      return probMascota >= 0.10;
     }
 
     async function comprobarSalud() {
